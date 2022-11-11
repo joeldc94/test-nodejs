@@ -89,11 +89,12 @@ app.post('/add-msg-contact', async (req, res) => {
     }).catch(()=>{
         return res.status(400).json({
             erro: true,
-            mensagem: "Erro: não foi possivel salvar sua mensagem."
+            mensagem: "Erro: não foi possivel salvar sua mensagem"
         });
     })
 });
 
-app.listen(8080, () => {
-    console.log("Servidor iniciado na porta 8080: http://localhost:8080");
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+    console.log(`Servidor iniciado na porta ${port}`);
 })
