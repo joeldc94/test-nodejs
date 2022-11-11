@@ -16,7 +16,9 @@ permitir acesso a API
 
 dependencia para acessar banco de dados
 ### npm install --save sequelize
+
 Instalar drive do banco de dados MySQL
 ### npm install --save mysql2
 
-
+Instalar dependencia para .env
+### npm install dotenv
