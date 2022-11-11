@@ -3,6 +3,7 @@ const cors = require('cors');
 const app = express();
 
 const Home = require('./models/Home');
+const MsgContact = require('./models/MsgContact');
 
 app.use(express.json());
 
@@ -12,7 +13,7 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Headers", "X-PINGOTHER, Content-Type, Authorization");
     app.use(cors());
     next();
-})
+});
 
 
 app.get('/', async (req,res) => {
@@ -38,7 +39,7 @@ app.get('/', async (req,res) => {
     }).catch(()=>{
         return res.status(400).json({
             erro: true,
-            mensagem: "Erro: Nenhum valor encontrado para a p´gina Home"
+            mensagem: "Erro: Nenhum valor encontrado para a página Home"
         })
     })
 })
@@ -73,7 +74,25 @@ app.post('/add-home',async (req, res) =>{
 })
 
 
+app.post('/add-msg-contact', async (req, res) => {
+    console.log(req.body)
 
+    //salvar no db
+    await MsgContact.create(req.body)
+    .then((msgContact) =>{
+        return res.json({
+            erro: false,
+            id: msgContact.id,
+            mensagem: "Mensagem de contato enviada com sucesso!"
+        })
+
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            mensagem: "Erro: não foi possivel salvar sua mensagem."
+        });
+    })
+});
 
 app.listen(8080, () => {
     console.log("Servidor iniciado na porta 8080: http://localhost:8080");
