@@ -17,6 +17,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
       rejectUnauthorized: false,
     }
   },
+  dialectModule: require('mysql2')
 })
 
 sequelize.authenticate()
