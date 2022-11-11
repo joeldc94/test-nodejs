@@ -17,7 +17,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
       rejectUnauthorized: false,
     }
   },
-  dialectModule: require('mysql2')
+  dialectModule: require('mysql2') //necessário adicionar a dependencia aqui para deploy no Vercel
 })
 
 sequelize.authenticate()
