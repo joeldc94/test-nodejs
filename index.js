@@ -9,6 +9,8 @@ const NR04_Sesmt = require('./models/NR04_Sesmt');
 
 app.use(express.json());
 
+//app.options('*', cors());
+
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE");
@@ -18,6 +20,7 @@ app.use((req, res, next) => {
 });
 
 
+//home page
 app.get('/', async (req,res) => {
     /*return res.json({
         erro: false,
@@ -46,6 +49,7 @@ app.get('/', async (req,res) => {
     })
 })
 
+//consulta DB NR04-SESMT
 app.post('/nr04-sesmt-consulta', async (req,res) =>{
     //grauRiscoInserido = 3;
     //faixa_trabalhadores_inserida = 7;
@@ -77,6 +81,7 @@ app.post('/nr04-sesmt-consulta', async (req,res) =>{
     
 })
 
+//??
 app.get('/nr04-sesmt', async (req,res) => {
     /*
     return res.json({
@@ -92,7 +97,7 @@ app.get('/nr04-sesmt', async (req,res) => {
             "medico": "1"
         }
     })
-    */
+    *//*
     const sesmt_table = await NR04_Sesmt.findAll({
         where:{
             "grau_risco": grauRiscoInserido,
@@ -110,9 +115,38 @@ app.get('/nr04-sesmt', async (req,res) => {
             erro: true,
             mensagem: "Erro: Nenhum valor encontrado para a página Home"
         })
+    })*/
+
+    const grauRiscoInserido = req.body.grau_risco;
+    const faixa_trabalhadores_inserida = req.body.faixa_trabalhadores;
+    console.log(grauRiscoInserido, faixa_trabalhadores_inserida);
+
+
+
+    const sesmt_table = await NR04_Sesmt.findAll({
+        where:{
+            "grau_risco": grauRiscoInserido,
+            "faixa_trabalhadores": faixa_trabalhadores_inserida
+        },
+        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
     })
+    .then((sesmt_table) => {
+        return res.json({
+            erro: false,
+            sesmt_table
+        })
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            mensagem: "Erro: Nenhum valor encontrado para a página Home"
+        })
+    })
+
+
+
 })
 
+//modificar textos home page
 app.post('/add-home',async (req, res) =>{
     
     //verifica se já há um registro no banco
@@ -142,7 +176,7 @@ app.post('/add-home',async (req, res) =>{
     })
 })
 
-
+//tela de contato, adiciona mensagem
 app.post('/add-msg-contact', async (req, res) => {
     console.log(req.body)
 
