@@ -4,6 +4,8 @@ const app = express();
 
 const Home = require('./models/Home');
 const MsgContact = require('./models/MsgContact');
+const NR04_Sesmt = require('./models/NR04_Sesmt');
+
 
 app.use(express.json());
 
@@ -35,6 +37,73 @@ app.get('/', async (req,res) => {
         return res.json({
             erro: false,
             dataHome
+        })
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            mensagem: "Erro: Nenhum valor encontrado para a página Home"
+        })
+    })
+})
+
+app.post('/nr04-sesmt-consulta', async (req,res) =>{
+    //grauRiscoInserido = 3;
+    //faixa_trabalhadores_inserida = 7;
+
+    const grauRiscoInserido = req.body.grau_risco;
+    const faixa_trabalhadores_inserida = req.body.faixa_trabalhadores;
+    console.log(grauRiscoInserido, faixa_trabalhadores_inserida);
+
+
+
+    const sesmt_table = await NR04_Sesmt.findAll({
+        where:{
+            "grau_risco": grauRiscoInserido,
+            "faixa_trabalhadores": faixa_trabalhadores_inserida
+        },
+        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+    })
+    .then((sesmt_table) => {
+        return res.json({
+            erro: false,
+            sesmt_table
+        })
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            mensagem: "Erro: Nenhum valor encontrado para a página Home"
+        })
+    })
+    
+})
+
+app.get('/nr04-sesmt', async (req,res) => {
+    /*
+    return res.json({
+        erro: false,
+        datahome: {
+            "grau_risco": "4",
+            "nro_trabalhadores": "Acima de 5000",
+            "faixa_trabalhadores": "8",
+            "tecnico_seg": "3",
+            "engenheiro_seg": "1",
+            "aux_tec_enfermagem": "1",
+            "enfermeiro": "0",
+            "medico": "1"
+        }
+    })
+    */
+    const sesmt_table = await NR04_Sesmt.findAll({
+        where:{
+            "grau_risco": grauRiscoInserido,
+            "faixa_trabalhadores": faixa_trabalhadores
+        },
+        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+    })
+    .then((sesmt_table) => {
+        return res.json({
+            erro: false,
+            sesmt_table
         })
     }).catch(()=>{
         return res.status(400).json({
