@@ -22,3 +22,8 @@ Instalar drive do banco de dados MySQL
 
 Instalar dependencia para .env
 ### npm install dotenv
+
+
+o script insert_nr04_table.js é utilizado para inserir dados nas tabelas NR04 do DB, com /models/NR04_Sesmt para a tabela de dimensionamento do Sesmt e /models/NR04_Cnae_Gr para relação do Cnae com grau de risco.
+Utilizar o programa Insomnia para facilitar. Utilizar um POST request no http://localhost:8080/... com um JSON com os dados a serem inseridos. Verificar os Models de cada tabela para pegar os nomes das colunas.
+Dividir mensagens muito grandes para caber em 1000 linhas

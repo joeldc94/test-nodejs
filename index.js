@@ -5,7 +5,8 @@ const app = express();
 const Home = require('./models/Home');
 const MsgContact = require('./models/MsgContact');
 const NR04_Sesmt = require('./models/NR04_Sesmt');
-
+const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
+const { Sequelize, Op } = require('sequelize');
 
 app.use(express.json());
 
@@ -51,34 +52,57 @@ app.get('/', async (req,res) => {
 
 //consulta DB NR04-SESMT
 app.post('/nr04-sesmt-consulta', async (req,res) =>{
-    //grauRiscoInserido = 3;
-    //faixa_trabalhadores_inserida = 7;
 
-    const grauRiscoInserido = req.body.grau_risco;
-    const faixa_trabalhadores_inserida = req.body.faixa_trabalhadores;
-    console.log(grauRiscoInserido, faixa_trabalhadores_inserida);
-
-
-
-    const sesmt_table = await NR04_Sesmt.findAll({
+    const codigoCnaeInserido = req.body.codigo_cnae;
+    const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
+    
+    var grauRiscoConsultado = 0;
+    
+    console.log(codigoCnaeInserido, numero_trabalhadores_inserido);
+    
+    //consulta tabela CNAEs
+    const cnae_table = await NR04_Cnae_Gr.findAll({
         where:{
-            "grau_risco": grauRiscoInserido,
-            "faixa_trabalhadores": faixa_trabalhadores_inserida
+            "codigo_cnae": codigoCnaeInserido,
         },
-        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+        attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
+    })
+    .then((cnae_table) => {
+        console.log('CNAE: ' + cnae_table[0].codigo_cnae + ' GRAU DE RISCO: ' + cnae_table[0].grau_risco);
+        grauRiscoConsultado =  cnae_table[0].grau_risco;        
+    })
+    .catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            mensagem: "Erro: Nenhum valor encontrado com o CNAE informado"
+        })
+    })
+
+    //consulta tabela SESMT
+    const sesmt_table = await NR04_Sesmt.findAll({
+        //consulta pelo grau de risco consultado na tabela anterior
+        //e pelo numero de tran=balhadores informado entre os limites de cada faixa
+        where:{
+            grau_risco: grauRiscoConsultado,
+            nro_trabalhadores_min: {[Op.lte]: numero_trabalhadores_inserido},
+            nro_trabalhadores_max: {[Op.gte]: numero_trabalhadores_inserido}
+        },
+        //retorna os seguintes atributos da tabela
+        attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
     })
     .then((sesmt_table) => {
         return res.json({
             erro: false,
             sesmt_table
         })
-    }).catch(()=>{
+    })
+    .catch(()=>{
+        console,log("Erro: Nenhum valor encontrado");
         return res.status(400).json({
             erro: true,
-            mensagem: "Erro: Nenhum valor encontrado para a página Home"
-        })
+            mensagem: "Erro: Nenhum valor encontrado"
+        })        
     })
-    
 })
 
 //??
@@ -115,18 +139,18 @@ app.get('/nr04-sesmt', async (req,res) => {
             erro: true,
             mensagem: "Erro: Nenhum valor encontrado para a página Home"
         })
-    })*/
+    })
 
     const grauRiscoInserido = req.body.grau_risco;
-    const faixa_trabalhadores_inserida = req.body.faixa_trabalhadores;
-    console.log(grauRiscoInserido, faixa_trabalhadores_inserida);
+    const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
+    console.log(grauRiscoInserido, numero_trabalhadores_inserido);
 
 
 
     const sesmt_table = await NR04_Sesmt.findAll({
         where:{
             "grau_risco": grauRiscoInserido,
-            "faixa_trabalhadores": faixa_trabalhadores_inserida
+            "numero_trabalhadores": numero_trabalhadores_inserido
         },
         attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
     })
@@ -141,6 +165,7 @@ app.get('/nr04-sesmt', async (req,res) => {
             mensagem: "Erro: Nenhum valor encontrado para a página Home"
         })
     })
+    */
 
 
 

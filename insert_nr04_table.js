@@ -49,7 +49,7 @@ app.post('/add-nr04-sesmt', async (req, res) => {
     console.log(req.body)
 
     //salvar no db
-    await NR04_Sesmt.create(req.body)
+    await NR04_Sesmt.bulkCreate(req.body)
     .then((row) =>{
         return res.json({
             erro: false,

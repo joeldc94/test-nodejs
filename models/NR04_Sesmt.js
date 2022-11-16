@@ -9,15 +9,15 @@ const NR04_Sesmt = db.define('nr04_dimensionamento_sesmts', {
         primaryKey: true
     },
     grau_risco:{
-        type: Sequelize.STRING,
+        type: Sequelize.INTEGER,
         allownull: false
     },
-    nro_trabalhadores: {
-        type: Sequelize.STRING,
+    nro_trabalhadores_min: {
+        type: Sequelize.INTEGER,
         allownull: false
     },
-    faixa_trabalhadores:{
-        type: Sequelize.STRING,
+    nro_trabalhadores_max:{
+        type: Sequelize.INTEGER,
         allownull: false
     },
     tecnico_seg:{
