@@ -3,6 +3,7 @@ const cors = require('cors');
 const app = express();
 
 const NR04_Sesmt = require('./models/NR04_Sesmt');
+const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
 
 app.use(express.json());
 
@@ -44,7 +45,7 @@ app.post('/add-home',async (req, res) =>{
 })
 */
 
-app.post('/add-nr04', async (req, res) => {
+app.post('/add-nr04-sesmt', async (req, res) => {
     console.log(req.body)
 
     //salvar no db
@@ -65,6 +66,29 @@ app.post('/add-nr04', async (req, res) => {
         });
     })
 });
+
+app.post('/add-nr04-cnae', async (req, res) => {
+    console.log(req.body)
+
+    //salvar no db
+    await NR04_Cnae_Gr.bulkCreate(req.body)
+    .then((row) =>{
+        return res.json({
+            erro: false,
+            id: row.id,
+            "grau de risco": row.grau_risco,
+            "faixa": row.faixa_trabalhadores,
+            status: "Código CNAE cadastrado com sucesso!"
+        })
+
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            status: "Erro: não foi possivel cadastrar CNAE"
+        });
+    })
+});
+
 
 const port = process.env.PORT || 8080;
 app.listen(port, () => {
