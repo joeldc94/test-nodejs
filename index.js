@@ -56,7 +56,10 @@ app.post('/nr04-sesmt-consulta', async (req,res) =>{
     const codigoCnaeInserido = req.body.codigo_cnae;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
     
-    var grauRiscoConsultado = 0;
+    var grauRiscoConsultado;
+    var denominacaoCnaeConsultada;
+    var codigoCnaeConsultado;
+
     
     console.log(codigoCnaeInserido, numero_trabalhadores_inserido);
     
@@ -69,7 +72,9 @@ app.post('/nr04-sesmt-consulta', async (req,res) =>{
     })
     .then((cnae_table) => {
         console.log('CNAE: ' + cnae_table[0].codigo_cnae + ' GRAU DE RISCO: ' + cnae_table[0].grau_risco);
-        grauRiscoConsultado =  cnae_table[0].grau_risco;        
+        grauRiscoConsultado =  cnae_table[0].grau_risco;
+        denominacaoCnaeConsultada = cnae_table[0].denominacao;
+        codigoCnaeConsultado = cnae_table[0].codigo_cnae;
     })
     .catch(()=>{
         return res.status(400).json({
@@ -90,9 +95,13 @@ app.post('/nr04-sesmt-consulta', async (req,res) =>{
         //retorna os seguintes atributos da tabela
         attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
     })
-    .then((sesmt_table) => {
+    .then((sesmt_table, cnae_table) => {
         return res.json({
             erro: false,
+            grauRiscoConsultado,
+            denominacaoCnaeConsultada,
+            codigoCnaeConsultado,
+            numero_trabalhadores_inserido,
             sesmt_table
         })
     })
