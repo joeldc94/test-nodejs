@@ -4,6 +4,7 @@ const app = express();
 
 const NR04_Sesmt = require('./models/NR04_Sesmt');
 const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
+const NR05_Cipa = require('./models/NR05_Cipa');
 
 app.use(express.json());
 
@@ -79,6 +80,25 @@ app.post('/add-nr04-cnae', async (req, res) => {
             "grau de risco": row.grau_risco,
             "faixa": row.faixa_trabalhadores,
             status: "Código CNAE cadastrado com sucesso!"
+        })
+
+    }).catch(()=>{
+        return res.status(400).json({
+            erro: true,
+            status: "Erro: não foi possivel cadastrar CNAE"
+        });
+    })
+});
+
+app.post('/add-nr05-cipa', async (req, res) => {
+    console.log(req.body)
+
+    //salvar no db
+    await NR05_Cipa.bulkCreate(req.body)
+    .then((row) =>{
+        return res.json({
+            erro: false,
+            status: "Relação CIPA cadastrada com sucesso!"
         })
 
     }).catch(()=>{
