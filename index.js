@@ -6,7 +6,9 @@ const Home = require('./models/Home');
 const MsgContact = require('./models/MsgContact');
 const NR04_Sesmt = require('./models/NR04_Sesmt');
 const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
-const { Sequelize, Op } = require('sequelize');
+const NR05_Cipa = require('./models/NR05_Cipa');
+const { Sequelize, Op, DataTypes } = require('sequelize');
+const sequelize = require('./models/db');
 
 app.use(express.json());
 
@@ -51,10 +53,44 @@ app.get('/', async (req,res) => {
 })
 
 //consulta DB NR04-SESMT
-app.post('/nr04-sesmt-consulta', async (req,res) =>{
+app.post('/nr04-05-consulta', async (req,res) =>{
 
     const codigoCnaeInserido = req.body.codigo_cnae;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
+
+    //estrutura para resposta
+    var respostaConsultaTabelas = {
+        status: 200,
+        erro: false,
+        mensagem: '',
+        cnae: '',
+        denominacao: '',
+        grauDeRisco: '',
+        nroTrabalhadores: numero_trabalhadores_inserido,
+        nroTrabalhadoresMinSesmt: '',
+        nroTrabalhadoresMaxSesmt: '',
+        tecnicoSeg: '',
+        engenheiroSeg: '',
+        auxTecEnfermagem: '',
+        enfermeiro: '',
+        medico: '',
+        nroTrabalhadoresMinCipa: '',
+        nroTrabalhadoresMaxCipa: '',
+        cipaEfetivos: '',
+        cipaSuplentes: ''
+    };
+
+    //verifica conexão com o DB
+    sequelize.authenticate()
+    .then(() => {
+        //console.log("Conexão com banco de dados realizada com sucesso!");
+    }).catch(() => {
+        respostaConsultaTabelas.status = 400;
+        respostaConsultaTabelas.erro = true;
+        respostaConsultaTabelas.mensagem = 'Erro: não foi possível connectar ao banco de dados';
+
+        //console.log("Erro: conexão com banco de dados não realizada com sucesso!");
+    })
     
     var grauRiscoConsultado;
     var denominacaoCnaeConsultada;
@@ -62,122 +98,107 @@ app.post('/nr04-sesmt-consulta', async (req,res) =>{
 
     
     console.log(codigoCnaeInserido, numero_trabalhadores_inserido);
+
+
+    if(!respostaConsultaTabelas.erro)
+    {
+        //consulta tabela CNAEs
+        const cnae_table = await NR04_Cnae_Gr.findAll({
+            //consulta linha para encontrar o CNAE inserido
+            where:{
+                "codigo_cnae": codigoCnaeInserido,
+            },
+            //retorna os atributos listados
+            attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
+        })
+        .then((cnae_table) => {
+            //se deu tudo certo, atribui os valores consultados a variável de resposta
+            respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
+            respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
+            respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
+        })
+        .catch(()=>{
+            //se ocorreu algum erro, preenche informações para retornar ao front
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado com o CNAE informado.'
+
+            /*
+            respostaConsultaTabelas.mensagem = 'Não foi possível encontrar o CNAE fornecido na base de dados.';
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Erro: Nenhum valor encontrado com o CNAE informado"
+            })
+            */
+        })
+    }
+    if(!respostaConsultaTabelas.erro)
+    {
+        //consulta tabela SESMT
+        const sesmt_table = await NR04_Sesmt.findAll({
+            //consulta pelo grau de risco consultado na tabela anterior
+            //e pelo numero de trabalhadores informado entre os limites de cada faixa
+            where:{
+                grau_risco: respostaConsultaTabelas.grauDeRisco,
+                nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
+                nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
+            },
+            //retorna os seguintes atributos da tabela
+            attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+        })
+        .then((sesmt_table) => {
+            //se deu tudo certo, atribui os valores consultados a variável de resposta
+            respostaConsultaTabelas.nroTrabalhadoresMinSesmt = sesmt_table[0].nro_trabalhadores_min;
+            respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = sesmt_table[0].nro_trabalhadores_max;
+            respostaConsultaTabelas.tecnicoSeg = sesmt_table[0].tecnico_seg;
+            respostaConsultaTabelas.engenheiroSeg = sesmt_table[0].engenheiro_seg;
+            respostaConsultaTabelas.auxTecEnfermagem = sesmt_table[0].aux_tec_enfermagem;
+            respostaConsultaTabelas.enfermeiro = sesmt_table[0].enfermeiro;
+            respostaConsultaTabelas.medico = sesmt_table[0].medico;
+        })
+        .catch(()=>{
+            //se ocorreu algum erro, preenche informações para retornar ao front
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe SESMT.'      
+        })
+     
+    }
     
-    //consulta tabela CNAEs
-    const cnae_table = await NR04_Cnae_Gr.findAll({
-        where:{
-            "codigo_cnae": codigoCnaeInserido,
-        },
-        attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
-    })
-    .then((cnae_table) => {
-        console.log('CNAE: ' + cnae_table[0].codigo_cnae + ' GRAU DE RISCO: ' + cnae_table[0].grau_risco);
-        grauRiscoConsultado =  cnae_table[0].grau_risco;
-        denominacaoCnaeConsultada = cnae_table[0].denominacao;
-        codigoCnaeConsultado = cnae_table[0].codigo_cnae;
-    })
-    .catch(()=>{
-        return res.status(400).json({
-            erro: true,
-            mensagem: "Erro: Nenhum valor encontrado com o CNAE informado"
+    if(!respostaConsultaTabelas.erro)
+    {
+        //consulta tabela CIPA
+        const cipa_table = await NR05_Cipa.findAll({
+            //consulta pelo grau de risco consultado na tabela anterior
+            //e pelo numero de trabalhadores informado entre os limites de cada faixa
+            where:{
+                grau_risco: respostaConsultaTabelas.grauDeRisco,
+                nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
+                nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
+            },
+            //retorna os seguintes atributos da tabela
+            attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'integrantes_efetivos','integrantes_suplentes']
         })
-    })
+        .then((cipa_table) => {
+            //se deu tudo certo, atribui os valores consultados a variável de resposta
+            respostaConsultaTabelas.nroTrabalhadoresMinCipa = cipa_table[0].nro_trabalhadores_min;
+            respostaConsultaTabelas.nroTrabalhadoresMaxCipa = cipa_table[0].nro_trabalhadores_max;
+            respostaConsultaTabelas.cipaEfetivos = cipa_table[0].integrantes_efetivos;
+            respostaConsultaTabelas.cipaSuplentes = cipa_table[0].integrantes_suplentes;
 
-    //consulta tabela SESMT
-    const sesmt_table = await NR04_Sesmt.findAll({
-        //consulta pelo grau de risco consultado na tabela anterior
-        //e pelo numero de tran=balhadores informado entre os limites de cada faixa
-        where:{
-            grau_risco: grauRiscoConsultado,
-            nro_trabalhadores_min: {[Op.lte]: numero_trabalhadores_inserido},
-            nro_trabalhadores_max: {[Op.gte]: numero_trabalhadores_inserido}
-        },
-        //retorna os seguintes atributos da tabela
-        attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
-    })
-    .then((sesmt_table, cnae_table) => {
-        return res.json({
-            erro: false,
-            grauRiscoConsultado,
-            denominacaoCnaeConsultada,
-            codigoCnaeConsultado,
-            numero_trabalhadores_inserido,
-            sesmt_table
+            //Última consulta, escreve mensagem de aprovação
+            respostaConsultaTabelas.mensagem = 'Todos dados consultados com sucesso' 
         })
-    })
-    .catch(()=>{
-        console,log("Erro: Nenhum valor encontrado");
-        return res.status(400).json({
-            erro: true,
-            mensagem: "Erro: Nenhum valor encontrado"
-        })        
-    })
-})
-
-//??
-app.get('/nr04-sesmt', async (req,res) => {
-    /*
-    return res.json({
-        erro: false,
-        datahome: {
-            "grau_risco": "4",
-            "nro_trabalhadores": "Acima de 5000",
-            "faixa_trabalhadores": "8",
-            "tecnico_seg": "3",
-            "engenheiro_seg": "1",
-            "aux_tec_enfermagem": "1",
-            "enfermeiro": "0",
-            "medico": "1"
-        }
-    })
-    *//*
-    const sesmt_table = await NR04_Sesmt.findAll({
-        where:{
-            "grau_risco": grauRiscoInserido,
-            "faixa_trabalhadores": faixa_trabalhadores
-        },
-        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
-    })
-    .then((sesmt_table) => {
-        return res.json({
-            erro: false,
-            sesmt_table
+        .catch(()=>{
+            //se ocorreu algum erro, preenche informações para retornar ao front
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe CIPA.'       
         })
-    }).catch(()=>{
-        return res.status(400).json({
-            erro: true,
-            mensagem: "Erro: Nenhum valor encontrado para a página Home"
-        })
-    })
+    }
 
-    const grauRiscoInserido = req.body.grau_risco;
-    const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
-    console.log(grauRiscoInserido, numero_trabalhadores_inserido);
-
-
-
-    const sesmt_table = await NR04_Sesmt.findAll({
-        where:{
-            "grau_risco": grauRiscoInserido,
-            "numero_trabalhadores": numero_trabalhadores_inserido
-        },
-        attributes: ['id', 'grau_risco', 'nro_trabalhadores', 'faixa_trabalhadores', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
-    })
-    .then((sesmt_table) => {
-        return res.json({
-            erro: false,
-            sesmt_table
-        })
-    }).catch(()=>{
-        return res.status(400).json({
-            erro: true,
-            mensagem: "Erro: Nenhum valor encontrado para a página Home"
-        })
-    })
-    */
-
-
-
+    //retorno para front
+    return res.status(respostaConsultaTabelas.status).json({respostaConsultaTabelas});
 })
 
 //modificar textos home page
