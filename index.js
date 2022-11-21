@@ -58,6 +58,9 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     const codigoCnaeInserido = req.body.codigo_cnae;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
 
+
+    //>>>verificar numero de trabalhadores
+
     //estrutura para resposta
     var respostaConsultaTabelas = {
         status: 200,
@@ -132,69 +135,157 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             */
         })
     }
-    if(!respostaConsultaTabelas.erro)
-    {
-        //consulta tabela SESMT
-        const sesmt_table = await NR04_Sesmt.findAll({
-            //consulta pelo grau de risco consultado na tabela anterior
-            //e pelo numero de trabalhadores informado entre os limites de cada faixa
-            where:{
-                grau_risco: respostaConsultaTabelas.grauDeRisco,
-                nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
-                nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
-            },
-            //retorna os seguintes atributos da tabela
-            attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
-        })
-        .then((sesmt_table) => {
-            //se deu tudo certo, atribui os valores consultados a variável de resposta
-            respostaConsultaTabelas.nroTrabalhadoresMinSesmt = sesmt_table[0].nro_trabalhadores_min;
-            respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = sesmt_table[0].nro_trabalhadores_max;
-            respostaConsultaTabelas.tecnicoSeg = sesmt_table[0].tecnico_seg;
-            respostaConsultaTabelas.engenheiroSeg = sesmt_table[0].engenheiro_seg;
-            respostaConsultaTabelas.auxTecEnfermagem = sesmt_table[0].aux_tec_enfermagem;
-            respostaConsultaTabelas.enfermeiro = sesmt_table[0].enfermeiro;
-            respostaConsultaTabelas.medico = sesmt_table[0].medico;
-        })
-        .catch(()=>{
-            //se ocorreu algum erro, preenche informações para retornar ao front
-            respostaConsultaTabelas.status = 400;
-            respostaConsultaTabelas.erro = true;
-            respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe SESMT.'      
-        })
-     
+    //consultar somente se nro trabalhadores >= 50
+    if(!respostaConsultaTabelas.erro){
+            //se o nro trabalhadores > 5000, realizar duas consultas, para 5000 e mais. Fazer o calculo
+        if(respostaConsultaTabelas.nroTrabalhadores > 5000){
+            
+            //calcula fator de multiplicação para grupos acima de 5000
+            var gruposAcima5000 = Math.floor((respostaConsultaTabelas.nroTrabalhadores-5000)/4000) + Math.floor(((respostaConsultaTabelas.nroTrabalhadores-5000)%4000)/2000);
+
+            /*
+            console.log(gruposAcima5000);
+
+            console.log(Math.floor((respostaConsultaTabelas.nroTrabalhadores-5000)/4000));
+
+            console.log(Math.floor(((respostaConsultaTabelas.nroTrabalhadores-5000)%4000)/2000));
+            */
+
+            //consulta tabela SESMT
+            const sesmt_table = await NR04_Sesmt.findAll({
+                //consulta pelo grau de risco consultado na tabela anterior
+                //e pelo numero de trabalhadores informado entre os limites de cada faixa
+                where:{
+                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    //nro_trabalhadores_min: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores},
+                    nro_trabalhadores_max: {[Op.gte]: 5000}
+                },
+                //retorna os seguintes atributos da tabela
+                attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+            })
+            .then((sesmt_table) => {
+
+                //console.log(sesmt_table[0]);
+                //console.log(sesmt_table[1]);
+                
+                //se deu tudo certo, atribui os valores consultados a variável de resposta
+                
+                respostaConsultaTabelas.nroTrabalhadoresMinSesmt = 5001;
+                respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = '';
+                respostaConsultaTabelas.tecnicoSeg = parseInt(sesmt_table[0].tecnico_seg) + parseInt(sesmt_table[1].tecnico_seg) * gruposAcima5000;
+                respostaConsultaTabelas.engenheiroSeg = parseInt(sesmt_table[0].engenheiro_seg) + parseInt(sesmt_table[1].engenheiro_seg) * gruposAcima5000;
+                respostaConsultaTabelas.auxTecEnfermagem = parseInt(sesmt_table[0].aux_tec_enfermagem) + parseInt(sesmt_table[1].aux_tec_enfermagem) * gruposAcima5000;
+                respostaConsultaTabelas.enfermeiro = parseInt(sesmt_table[0].enfermeiro) + parseInt(sesmt_table[1].enfermeiro) * gruposAcima5000;
+                respostaConsultaTabelas.medico = parseInt(sesmt_table[0].medico) + parseInt(sesmt_table[1].medico) * gruposAcima5000;
+                
+            })
+            .catch(()=>{
+                //se ocorreu algum erro, preenche informações para retornar ao front
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe SESMT.'      
+            })            
+        }
+        else{
+            const sesmt_table = await NR04_Sesmt.findAll({
+                //consulta pelo grau de risco consultado na tabela anterior
+                //e pelo numero de trabalhadores informado entre os limites de cada faixa
+                where:{
+                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    nro_trabalhadores_min: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores},
+                    nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
+                },
+                //retorna os seguintes atributos da tabela
+                attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
+            })
+            .then((sesmt_table) => {
+                //se deu tudo certo, atribui os valores consultados a variável de resposta
+                respostaConsultaTabelas.nroTrabalhadoresMinSesmt = sesmt_table[0].nro_trabalhadores_min;
+                respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = sesmt_table[0].nro_trabalhadores_max;
+                respostaConsultaTabelas.tecnicoSeg = sesmt_table[0].tecnico_seg;
+                respostaConsultaTabelas.engenheiroSeg = sesmt_table[0].engenheiro_seg;
+                respostaConsultaTabelas.auxTecEnfermagem = sesmt_table[0].aux_tec_enfermagem;
+                respostaConsultaTabelas.enfermeiro = sesmt_table[0].enfermeiro;
+                respostaConsultaTabelas.medico = sesmt_table[0].medico;
+            })
+            .catch(()=>{
+                //se ocorreu algum erro, preenche informações para retornar ao front
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe SESMT.'      
+            })
+        }
+        
     }
     
     if(!respostaConsultaTabelas.erro)
     {
-        //consulta tabela CIPA
-        const cipa_table = await NR05_Cipa.findAll({
-            //consulta pelo grau de risco consultado na tabela anterior
-            //e pelo numero de trabalhadores informado entre os limites de cada faixa
-            where:{
-                grau_risco: respostaConsultaTabelas.grauDeRisco,
-                nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
-                nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
-            },
-            //retorna os seguintes atributos da tabela
-            attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'integrantes_efetivos','integrantes_suplentes']
-        })
-        .then((cipa_table) => {
-            //se deu tudo certo, atribui os valores consultados a variável de resposta
-            respostaConsultaTabelas.nroTrabalhadoresMinCipa = cipa_table[0].nro_trabalhadores_min;
-            respostaConsultaTabelas.nroTrabalhadoresMaxCipa = cipa_table[0].nro_trabalhadores_max;
-            respostaConsultaTabelas.cipaEfetivos = cipa_table[0].integrantes_efetivos;
-            respostaConsultaTabelas.cipaSuplentes = cipa_table[0].integrantes_suplentes;
+        if(respostaConsultaTabelas.nroTrabalhadores > 10000){
+            //calcula fator de multiplicação para grupos acima de 5000
+            var gruposAcima10000 = Math.floor((respostaConsultaTabelas.nroTrabalhadores-10000)/2500);
+            //console.log('CIPA: ' + gruposAcima10000.toString());
+            const cipa_table = await NR05_Cipa.findAll({
+                //consulta pelo grau de risco consultado na tabela anterior
+                //e pelo numero de trabalhadores informado entre os limites de cada faixa
+                where:{
+                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    nro_trabalhadores_max: {[Op.gte]: 10000}
+                },
+                //retorna os seguintes atributos da tabela
+                attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'integrantes_efetivos','integrantes_suplentes']
+            })
+            .then((cipa_table) => {
+                //se deu tudo certo, atribui os valores consultados a variável de resposta
+                respostaConsultaTabelas.nroTrabalhadoresMinCipa = cipa_table[0].nro_trabalhadores_min;
+                respostaConsultaTabelas.nroTrabalhadoresMaxCipa = cipa_table[0].nro_trabalhadores_max;
+                respostaConsultaTabelas.cipaEfetivos = parseInt(cipa_table[0].integrantes_efetivos) + parseInt(cipa_table[1].integrantes_efetivos) * gruposAcima10000;
+                respostaConsultaTabelas.cipaSuplentes = parseInt(cipa_table[0].integrantes_suplentes) + parseInt(cipa_table[1].integrantes_suplentes) * gruposAcima10000;
 
-            //Última consulta, escreve mensagem de aprovação
-            respostaConsultaTabelas.mensagem = 'Todos dados consultados com sucesso' 
-        })
-        .catch(()=>{
-            //se ocorreu algum erro, preenche informações para retornar ao front
-            respostaConsultaTabelas.status = 400;
-            respostaConsultaTabelas.erro = true;
-            respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe CIPA.'       
-        })
+                //Última consulta, escreve mensagem de aprovação
+                respostaConsultaTabelas.mensagem = 'Todos dados consultados com sucesso' 
+            })
+            .catch(()=>{
+                //se ocorreu algum erro, preenche informações para retornar ao front
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe CIPA.'       
+            })
+
+
+
+
+
+        }
+        else{
+            //consulta tabela CIPA
+            const cipa_table = await NR05_Cipa.findAll({
+                //consulta pelo grau de risco consultado na tabela anterior
+                //e pelo numero de trabalhadores informado entre os limites de cada faixa
+                where:{
+                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
+                    nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
+                },
+                //retorna os seguintes atributos da tabela
+                attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'integrantes_efetivos','integrantes_suplentes']
+            })
+            .then((cipa_table) => {
+                //se deu tudo certo, atribui os valores consultados a variável de resposta
+                respostaConsultaTabelas.nroTrabalhadoresMinCipa = cipa_table[0].nro_trabalhadores_min;
+                respostaConsultaTabelas.nroTrabalhadoresMaxCipa = cipa_table[0].nro_trabalhadores_max;
+                respostaConsultaTabelas.cipaEfetivos = cipa_table[0].integrantes_efetivos;
+                respostaConsultaTabelas.cipaSuplentes = cipa_table[0].integrantes_suplentes;
+
+                //Última consulta, escreve mensagem de aprovação
+                respostaConsultaTabelas.mensagem = 'Todos dados consultados com sucesso' 
+            })
+            .catch(()=>{
+                //se ocorreu algum erro, preenche informações para retornar ao front
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado da base de dados da equipe CIPA.'       
+            })
+        }
     }
 
     //retorno para front
