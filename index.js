@@ -130,9 +130,10 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         })
         .then((cnae_table) => {
             if(cnae_table.length > 1){
-                console.log("Com [1]<<<<<<<<<<");
+                /*console.log("Com [1]<<<<<<<<<<");
                 console.log(cnae_table[0]);
                 console.log(cnae_table[1]);
+                */
                 
                 if(cnae_table[0].grau_risco < cnae_table[1].grau_risco){
                     respostaConsultaTabelas.cnae = cnae_table[1].codigo_cnae;
@@ -147,7 +148,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 }
             }
             else{
-                console.log("Sem [1]<<<<<<<<<<");
+                //console.log("Sem [1]<<<<<<<<<<");
                 //se deu tudo certo, atribui os valores consultados a variável de resposta
                 respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
                 respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
@@ -226,7 +227,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //e pelo numero de trabalhadores informado entre os limites de cada faixa
                 where:{
                     grau_risco: respostaConsultaTabelas.grauDeRisco,
-                    nro_trabalhadores_min: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores},
+                    nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
                     nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
                 },
                 //retorna os seguintes atributos da tabela
