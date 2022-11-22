@@ -55,8 +55,11 @@ app.get('/', async (req,res) => {
 //consulta DB NR04-SESMT
 app.post('/nr04-05-consulta', async (req,res) =>{
 
-    const codigoCnaeInserido = req.body.codigo_cnae;
+    const codigoCnae1Inserido = req.body.codigo_cnae1;
+    const codigoCnae2Inserido = req.body.codigo_cnae2;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
+
+    //console.log(req.body);
 
 
     //>>>verificar numero de trabalhadores
@@ -100,7 +103,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     var codigoCnaeConsultado;
 
     
-    console.log(codigoCnaeInserido, numero_trabalhadores_inserido);
+    console.log(codigoCnae1Inserido, numero_trabalhadores_inserido);
 
 
     if(!respostaConsultaTabelas.erro)
@@ -108,17 +111,48 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         //consulta tabela CNAEs
         const cnae_table = await NR04_Cnae_Gr.findAll({
             //consulta linha para encontrar o CNAE inserido
+
             where:{
-                "codigo_cnae": codigoCnaeInserido,
+                "codigo_cnae": {
+                    [Op.or]: [codigoCnae1Inserido, codigoCnae2Inserido]
+                }                
             },
             //retorna os atributos listados
             attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
+
+            /*
+            where:{
+                "codigo_cnae": codigoCnae1Inserido,
+            },
+            //retorna os atributos listados
+            attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
+            */
         })
         .then((cnae_table) => {
-            //se deu tudo certo, atribui os valores consultados a variável de resposta
-            respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
-            respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
-            respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
+            if(cnae_table.length > 1){
+                console.log("Com [1]<<<<<<<<<<");
+                console.log(cnae_table[0]);
+                console.log(cnae_table[1]);
+                
+                if(cnae_table[0].grau_risco < cnae_table[1].grau_risco){
+                    respostaConsultaTabelas.cnae = cnae_table[1].codigo_cnae;
+                    respostaConsultaTabelas.denominacao = cnae_table[1].denominacao;
+                    respostaConsultaTabelas.grauDeRisco = cnae_table[1].grau_risco;
+                }
+                else{
+                    //se deu tudo certo, atribui os valores consultados a variável de resposta
+                    respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
+                    respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
+                    respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
+                }
+            }
+            else{
+                console.log("Sem [1]<<<<<<<<<<");
+                //se deu tudo certo, atribui os valores consultados a variável de resposta
+                respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
+                respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
+                respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
+            }
         })
         .catch(()=>{
             //se ocorreu algum erro, preenche informações para retornar ao front
