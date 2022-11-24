@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const https = require('https');
+const got = require('got');
 
 const Home = require('./models/Home');
 const MsgContact = require('./models/MsgContact');
@@ -9,6 +11,7 @@ const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
 const NR05_Cipa = require('./models/NR05_Cipa');
 const { Sequelize, Op, DataTypes } = require('sequelize');
 const sequelize = require('./models/db');
+
 
 app.use(express.json());
 
@@ -55,24 +58,26 @@ app.get('/', async (req,res) => {
 //consulta DB NR04-SESMT
 app.post('/nr04-05-consulta', async (req,res) =>{
 
-    const codigoCnae1Inserido = req.body.codigo_cnae1;
+    const cnpjInserido = req.body.cnpj;
+    const codigoCnae1Inserido = req.body.codigo_cnae1;;
     const codigoCnae2Inserido = req.body.codigo_cnae2;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
-
-    //console.log(req.body);
-
 
     //>>>verificar numero de trabalhadores
 
     //estrutura para resposta
     var respostaConsultaTabelas = {
         status: 200,
-        erro: false,
+        erro: false,        
         mensagem: '',
+        nroTrabalhadores: numero_trabalhadores_inserido,
+        codigosCnae: [],
+        descricaoCnae: []
+        /*
         cnae: '',
         denominacao: '',
         grauDeRisco: '',
-        nroTrabalhadores: numero_trabalhadores_inserido,
+        
         nroTrabalhadoresMinSesmt: '',
         nroTrabalhadoresMaxSesmt: '',
         tecnicoSeg: '',
@@ -84,7 +89,70 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         nroTrabalhadoresMaxCipa: '',
         cipaEfetivos: '',
         cipaSuplentes: ''
+        */
+        
     };
+    //console.log(process.env.URL_API_MINHARECEITA + cnpjInserido);
+
+    if(cnpjInserido){
+        //consulta informações no CNPJ inserido
+       
+        //try{
+            console.log('CNPJ INSERIDO!!!' + cnpjInserido);
+            //const c = cnpj.consultaCnpj(cnpjInserido).then(console.log(c));
+            
+
+
+    
+        try {
+            const response = await got(process.env.URL_API_MINHARECEITA + cnpjInserido, { json: true });
+            console.log('AQUI!!!');
+            //console.log(response);
+            console.log(response.body.cnae_fiscal);
+            const c = JSON.stringify(response.body.cnae_fiscal);
+            respostaConsultaTabelas.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
+            console.log(respostaConsultaTabelas.codigosCnae[0]);
+            //respostaConsultaTabelas.codigosCnae[0] = response.body.cnae_fiscal;
+        } catch (error) {
+            console.log(error.response.body);
+        }
+              
+/*
+            
+            https.get(process.env.URL_API_MINHARECEITA + cnpjInserido, res => {
+            let rawData = '';
+
+            res.on('data', chunk => {
+                rawData += chunk;
+            });
+
+            res.on('end', () => {
+                const parsedData = JSON.parse(rawData);
+                //console.log(parsedData.cnae_fiscal)
+                //console.log(parsedData.cnaes_secundarios)
+                respostaConsultaTabelas.codigosCnae[0] = parsedData.cnae_fiscal;
+                respostaConsultaTabelas.descricaoCnae[0] = parsedData.cnae_fiscal_descricao;
+                //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[1].codigo);
+                //var respostaConsultaTabelas.cnaesSecundarios[];
+                for (var i = 0; i < parsedData.cnaes_secundarios.length; i++) {
+                    console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
+                    respostaConsultaTabelas.codigosCnae[i + 1] = parsedData.cnaes_secundarios[i].codigo;
+                    respostaConsultaTabelas.descricaoCnae[i + 1] = parsedData.cnaes_secundarios[i].descricao;
+                }
+                //respostaConsultaTabelas.cnaesSecudarios = parsedData.cnaes_secudarios;
+            });
+        })*/
+        /*    
+        }
+        catch{
+            console.log('não foi possivel buscar cnpj');
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
+        }*/
+    }
+
+
 
     //verifica conexão com o DB
     sequelize.authenticate()
@@ -97,13 +165,14 @@ app.post('/nr04-05-consulta', async (req,res) =>{
 
         //console.log("Erro: conexão com banco de dados não realizada com sucesso!");
     })
-    
+    /*
     var grauRiscoConsultado;
     var denominacaoCnaeConsultada;
     var codigoCnaeConsultado;
-
+    */
     
-    console.log(codigoCnae1Inserido, numero_trabalhadores_inserido);
+    //console.log(codigoCnae1Inserido, numero_trabalhadores_inserido);
+    console.log(respostaConsultaTabelas.codigosCnae[0], numero_trabalhadores_inserido);
 
 
     if(!respostaConsultaTabelas.erro)
@@ -112,10 +181,12 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         const cnae_table = await NR04_Cnae_Gr.findAll({
             //consulta linha para encontrar o CNAE inserido
 
-            where:{
+            where:{/*
                 "codigo_cnae": {
                     [Op.or]: [codigoCnae1Inserido, codigoCnae2Inserido]
-                }                
+                    
+                }   */  
+                "codigo_cnae": respostaConsultaTabelas.codigosCnae[0]
             },
             //retorna os atributos listados
             attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
@@ -377,6 +448,8 @@ app.post('/add-msg-contact', async (req, res) => {
         });
     })
 });
+
+
 
 const port = process.env.PORT || 8080;
 app.listen(port, () => {
