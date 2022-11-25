@@ -63,6 +63,14 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     const codigoCnae2Inserido = req.body.codigo_cnae2;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
 
+    var codigosCnaesConsultar = []; 
+    
+    
+    var consultaCNPJ ={
+        codigosCnae: [],
+        descricaoCnae: []
+    }
+
     //>>>verificar numero de trabalhadores
 
     //estrutura para resposta
@@ -71,8 +79,10 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         erro: false,        
         mensagem: '',
         nroTrabalhadores: numero_trabalhadores_inserido,
-        codigosCnae: [],
-        descricaoCnae: []
+        codigoCnae: [],
+        descricaoCnae: [],
+        graudeRisco: []
+        
         /*
         cnae: '',
         denominacao: '',
@@ -95,26 +105,37 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     //console.log(process.env.URL_API_MINHARECEITA + cnpjInserido);
 
     if(cnpjInserido){
-        //consulta informações no CNPJ inserido
+        //consulta informações no CNPJ inserido na API minhareceita.org
        
         //try{
-            console.log('CNPJ INSERIDO!!!' + cnpjInserido);
-            //const c = cnpj.consultaCnpj(cnpjInserido).then(console.log(c));
-            
-
-
-    
+        console.log('CNPJ INSERIDO! ==> ' + cnpjInserido);
+        
         try {
+            //GET request na API
             const response = await got(process.env.URL_API_MINHARECEITA + cnpjInserido, { json: true });
-            console.log('AQUI!!!');
             //console.log(response);
-            console.log(response.body.cnae_fiscal);
+            //console.log(response.body.cnae_fiscal);
             const c = JSON.stringify(response.body.cnae_fiscal);
-            respostaConsultaTabelas.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
-            console.log(respostaConsultaTabelas.codigosCnae[0]);
+            //formata o CNAE principal para o formato ab.cd-e, conforme inserido na tabela do grau de risco na NR04
+            consultaCNPJ.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
+            consultaCNPJ.descricaoCnae[0] = response.body.cnae_fiscal_descricao;
+            //console.log(response.body.cnaes_secundarios.length);
+
+            for (var i=0; i < response.body.cnaes_secundarios.length; i++) {
+                //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
+                //formata todos os cnaes secundários
+                var cAux = JSON.stringify(response.body.cnaes_secundarios[i].codigo);
+                consultaCNPJ.codigosCnae[i + 1] = cAux.charAt(0)+cAux.charAt(1)+'.'+cAux.charAt(2)+cAux.charAt(3)+'-'+cAux.charAt(4);
+                consultaCNPJ.descricaoCnae[i + 1] = response.body.cnaes_secundarios[i].descricao;
+            }
+            
+            //console.log(respostaConsultaTabelas.codigosCnae[0]);
             //respostaConsultaTabelas.codigosCnae[0] = response.body.cnae_fiscal;
         } catch (error) {
-            console.log(error.response.body);
+            console.log(error);
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
         }
               
 /*
@@ -152,19 +173,42 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         }*/
     }
 
+    if(!respostaConsultaTabelas.erro){
+        if(consultaCNPJ.codigosCnae.length > 0){
+            for (var i=0; i < consultaCNPJ.codigosCnae.length; i++) {
+                codigosCnaesConsultar[i] = consultaCNPJ.codigosCnae[i];
+                console.log(codigosCnaesConsultar[i]);
+            }
+        }else if(codigoCnae1Inserido){
+            codigosCnaesConsultar[0] = codigoCnae1Inserido;
+            if(codigoCnae2Inserido){
+                codigosCnaesConsultar[1] = codigoCnae2Inserido;
+            }
+            //console.log(codigosCnaesConsultar[0]);
+        }else{
+            if(codigoCnae2Inserido){
+                codigosCnaesConsultar[0] = codigoCnae2Inserido;
+            }else{
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: não foi possível identificar o código CNAE relacionado';
+            }
+        }
+    }
 
 
-    //verifica conexão com o DB
-    sequelize.authenticate()
-    .then(() => {
-        //console.log("Conexão com banco de dados realizada com sucesso!");
-    }).catch(() => {
-        respostaConsultaTabelas.status = 400;
-        respostaConsultaTabelas.erro = true;
-        respostaConsultaTabelas.mensagem = 'Erro: não foi possível connectar ao banco de dados';
-
-        //console.log("Erro: conexão com banco de dados não realizada com sucesso!");
-    })
+    if(codigosCnaesConsultar.length > 0){
+        //verifica conexão com o DB
+        sequelize.authenticate()
+        .then(() => {
+            //console.log("Conexão com banco de dados realizada com sucesso!");
+        }).catch(() => {
+            respostaConsultaTabelas.status = 400;
+            respostaConsultaTabelas.erro = true;
+            respostaConsultaTabelas.mensagem = 'Erro: não foi possível connectar ao banco de dados';
+            //console.log("Erro: conexão com banco de dados não realizada com sucesso!");
+        })
+    }
     /*
     var grauRiscoConsultado;
     var denominacaoCnaeConsultada;
@@ -172,11 +216,17 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     */
     
     //console.log(codigoCnae1Inserido, numero_trabalhadores_inserido);
-    console.log(respostaConsultaTabelas.codigosCnae[0], numero_trabalhadores_inserido);
+    //console.log(respostaConsultaTabelas.codigosCnae[0], numero_trabalhadores_inserido);
 
 
     if(!respostaConsultaTabelas.erro)
     {
+        
+        for (var i=0; i < codigosCnaesConsultar.length; i++) {
+            console.log('R-CNAE '+i+': '+codigosCnaesConsultar[i]);
+        }
+
+
         //consulta tabela CNAEs
         const cnae_table = await NR04_Cnae_Gr.findAll({
             //consulta linha para encontrar o CNAE inserido
@@ -186,7 +236,8 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                     [Op.or]: [codigoCnae1Inserido, codigoCnae2Inserido]
                     
                 }   */  
-                "codigo_cnae": respostaConsultaTabelas.codigosCnae[0]
+                //"codigo_cnae": consultaCNPJ.codigosCnae
+                "codigo_cnae": codigosCnaesConsultar
             },
             //retorna os atributos listados
             attributes: ['id', 'codigo_cnae', 'denominacao', 'grau_risco']
@@ -200,11 +251,20 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             */
         })
         .then((cnae_table) => {
+            for(var i=0;i<cnae_table.length;i++){
+                respostaConsultaTabelas.codigoCnae[i] = cnae_table[i].codigo_cnae;
+                respostaConsultaTabelas.descricaoCnae[i] = cnae_table[i].denominacao;
+                respostaConsultaTabelas.graudeRisco[i] = parseInt(cnae_table[i].grau_risco);
+                //console.log('CNAE '+i+': '+cnae_table[i].codigo_cnae);
+            }
             if(cnae_table.length > 1){
                 /*console.log("Com [1]<<<<<<<<<<");
                 console.log(cnae_table[0]);
                 console.log(cnae_table[1]);
                 */
+               //verifica qual é o maior grau de risco
+               respostaConsultaTabelas.maiorGrauRisco = Math.max(...respostaConsultaTabelas.graudeRisco);
+               /*
                 
                 if(cnae_table[0].grau_risco < cnae_table[1].grau_risco){
                     respostaConsultaTabelas.cnae = cnae_table[1].codigo_cnae;
@@ -217,13 +277,17 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                     respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
                     respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
                 }
+                */
             }
             else{
+                respostaConsultaTabelas.maiorGrauRisco = parseInt(cnae_table[0].grau_risco);
                 //console.log("Sem [1]<<<<<<<<<<");
                 //se deu tudo certo, atribui os valores consultados a variável de resposta
+                /*
                 respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
                 respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
                 respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
+                */
             }
         })
         .catch(()=>{
@@ -262,7 +326,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //consulta pelo grau de risco consultado na tabela anterior
                 //e pelo numero de trabalhadores informado entre os limites de cada faixa
                 where:{
-                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    grau_risco: respostaConsultaTabelas.maiorGrauRisco,
                     //nro_trabalhadores_min: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores},
                     nro_trabalhadores_max: {[Op.gte]: 5000}
                 },
@@ -297,7 +361,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //consulta pelo grau de risco consultado na tabela anterior
                 //e pelo numero de trabalhadores informado entre os limites de cada faixa
                 where:{
-                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    grau_risco: respostaConsultaTabelas.maiorGrauRisco,
                     nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
                     nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
                 },
@@ -334,7 +398,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //consulta pelo grau de risco consultado na tabela anterior
                 //e pelo numero de trabalhadores informado entre os limites de cada faixa
                 where:{
-                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    grau_risco: respostaConsultaTabelas.maiorGrauRisco,
                     nro_trabalhadores_max: {[Op.gte]: 10000}
                 },
                 //retorna os seguintes atributos da tabela
@@ -368,7 +432,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //consulta pelo grau de risco consultado na tabela anterior
                 //e pelo numero de trabalhadores informado entre os limites de cada faixa
                 where:{
-                    grau_risco: respostaConsultaTabelas.grauDeRisco,
+                    grau_risco: respostaConsultaTabelas.maiorGrauRisco,
                     nro_trabalhadores_min: {[Op.lte]: respostaConsultaTabelas.nroTrabalhadores},
                     nro_trabalhadores_max: {[Op.gte]: respostaConsultaTabelas.nroTrabalhadores}
                 },
