@@ -121,6 +121,8 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             consultaCNPJ.descricaoCnae[0] = response.body.cnae_fiscal_descricao;
             //console.log(response.body.cnaes_secundarios.length);
 
+
+
             for (var i=0; i < response.body.cnaes_secundarios.length; i++) {
                 //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
                 //formata todos os cnaes secundários
@@ -128,6 +130,10 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 consultaCNPJ.codigosCnae[i + 1] = cAux.charAt(0)+cAux.charAt(1)+'.'+cAux.charAt(2)+cAux.charAt(3)+'-'+cAux.charAt(4);
                 consultaCNPJ.descricaoCnae[i + 1] = response.body.cnaes_secundarios[i].descricao;
             }
+
+            respostaConsultaTabelas.cnpj = response.body.cnpj;
+            respostaConsultaTabelas.razaoSocial = response.body.razao_social;
+            respostaConsultaTabelas.nomeFantasia = response.body.nome_fantasia;
             
             //console.log(respostaConsultaTabelas.codigosCnae[0]);
             //respostaConsultaTabelas.codigosCnae[0] = response.body.cnae_fiscal;
@@ -492,6 +498,8 @@ app.post('/add-home',async (req, res) =>{
     })
 })
 
+
+/*
 //tela de contato, adiciona mensagem
 app.post('/add-msg-contact', async (req, res) => {
     console.log(req.body)
@@ -512,6 +520,7 @@ app.post('/add-msg-contact', async (req, res) => {
         });
     })
 });
+*/
 
 
 
