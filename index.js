@@ -108,7 +108,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         //consulta informações no CNPJ inserido na API minhareceita.org
        
         //try{
-        console.log('CNPJ INSERIDO! ==> ' + cnpjInserido);
+        //console.log('CNPJ INSERIDO! ==> ' + cnpjInserido);
         
         try {
             //GET request na API
@@ -143,40 +143,6 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             respostaConsultaTabelas.erro = true;
             respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
         }
-              
-/*
-            
-            https.get(process.env.URL_API_MINHARECEITA + cnpjInserido, res => {
-            let rawData = '';
-
-            res.on('data', chunk => {
-                rawData += chunk;
-            });
-
-            res.on('end', () => {
-                const parsedData = JSON.parse(rawData);
-                //console.log(parsedData.cnae_fiscal)
-                //console.log(parsedData.cnaes_secundarios)
-                respostaConsultaTabelas.codigosCnae[0] = parsedData.cnae_fiscal;
-                respostaConsultaTabelas.descricaoCnae[0] = parsedData.cnae_fiscal_descricao;
-                //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[1].codigo);
-                //var respostaConsultaTabelas.cnaesSecundarios[];
-                for (var i = 0; i < parsedData.cnaes_secundarios.length; i++) {
-                    console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
-                    respostaConsultaTabelas.codigosCnae[i + 1] = parsedData.cnaes_secundarios[i].codigo;
-                    respostaConsultaTabelas.descricaoCnae[i + 1] = parsedData.cnaes_secundarios[i].descricao;
-                }
-                //respostaConsultaTabelas.cnaesSecudarios = parsedData.cnaes_secudarios;
-            });
-        })*/
-        /*    
-        }
-        catch{
-            console.log('não foi possivel buscar cnpj');
-            respostaConsultaTabelas.status = 400;
-            respostaConsultaTabelas.erro = true;
-            respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
-        }*/
     }
 
     if(!respostaConsultaTabelas.erro){
@@ -319,14 +285,6 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             //calcula fator de multiplicação para grupos acima de 5000
             var gruposAcima5000 = Math.floor((respostaConsultaTabelas.nroTrabalhadores-5000)/4000) + Math.floor(((respostaConsultaTabelas.nroTrabalhadores-5000)%4000)/2000);
 
-            /*
-            console.log(gruposAcima5000);
-
-            console.log(Math.floor((respostaConsultaTabelas.nroTrabalhadores-5000)/4000));
-
-            console.log(Math.floor(((respostaConsultaTabelas.nroTrabalhadores-5000)%4000)/2000));
-            */
-
             //consulta tabela SESMT
             const sesmt_table = await NR04_Sesmt.findAll({
                 //consulta pelo grau de risco consultado na tabela anterior
@@ -348,12 +306,43 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 
                 respostaConsultaTabelas.nroTrabalhadoresMinSesmt = 5001;
                 respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = '';
-                respostaConsultaTabelas.tecnicoSeg = parseInt(sesmt_table[0].tecnico_seg) + parseInt(sesmt_table[1].tecnico_seg) * gruposAcima5000;
-                respostaConsultaTabelas.engenheiroSeg = parseInt(sesmt_table[0].engenheiro_seg) + parseInt(sesmt_table[1].engenheiro_seg) * gruposAcima5000;
-                respostaConsultaTabelas.auxTecEnfermagem = parseInt(sesmt_table[0].aux_tec_enfermagem) + parseInt(sesmt_table[1].aux_tec_enfermagem) * gruposAcima5000;
-                respostaConsultaTabelas.enfermeiro = parseInt(sesmt_table[0].enfermeiro) + parseInt(sesmt_table[1].enfermeiro) * gruposAcima5000;
-                respostaConsultaTabelas.medico = parseInt(sesmt_table[0].medico) + parseInt(sesmt_table[1].medico) * gruposAcima5000;
+
+                if(sesmt_table[1].tecnico_seg.indexOf('*') >= 0){
+                    respostaConsultaTabelas.obsSesmt1 = true;
+                    respostaConsultaTabelas.tecnicoSeg = sesmt_table[0].tecnico_seg +' + '+ (parseInt(sesmt_table[1].tecnico_seg) * gruposAcima5000) +'*';
+                }else{
+                    respostaConsultaTabelas.tecnicoSeg = parseInt(sesmt_table[0].tecnico_seg) + parseInt(sesmt_table[1].tecnico_seg) * gruposAcima5000;
+                }
+                //
+                if(sesmt_table[1].engenheiro_seg.indexOf('*') >= 0){
+                    respostaConsultaTabelas.obsSesmt1 = true;
+                    respostaConsultaTabelas.engenheiroSeg = sesmt_table[0].engenheiro_seg +' + '+ (parseInt(sesmt_table[1].engenheiro_seg) * gruposAcima5000) +'*';
+                }else{
+                    respostaConsultaTabelas.engenheiroSeg = parseInt(sesmt_table[0].engenheiro_seg) + parseInt(sesmt_table[1].engenheiro_seg) * gruposAcima5000;
+                }
+                //
+                if(sesmt_table[1].aux_tec_enfermagem.indexOf('*') >= 0){
+                    respostaConsultaTabelas.obsSesmt1 = true;
+                    respostaConsultaTabelas.auxTecEnfermagem = sesmt_table[0].aux_tec_enfermagem +' + '+ (parseInt(sesmt_table[1].aux_tec_enfermagem) * gruposAcima5000) +'*';
+                }else{
+                    respostaConsultaTabelas.auxTecEnfermagem = parseInt(sesmt_table[0].aux_tec_enfermagem) + parseInt(sesmt_table[1].aux_tec_enfermagem) * gruposAcima5000;
+                }
+                //
+                if(sesmt_table[1].enfermeiro.indexOf('*') >= 0){
+                    respostaConsultaTabelas.obsSesmt1 = true;
+                    respostaConsultaTabelas.enfermeiro = sesmt_table[0].enfermeiro +' + '+ (parseInt(sesmt_table[1].enfermeiro) * gruposAcima5000) +'*';
+                }else{
+                    respostaConsultaTabelas.enfermeiro = parseInt(sesmt_table[0].enfermeiro) + parseInt(sesmt_table[1].enfermeiro) * gruposAcima5000;
+                }
+                //
+                if(sesmt_table[1].medico.indexOf('*') >= 0){
+                    respostaConsultaTabelas.obsSesmt1 = true;
+                    respostaConsultaTabelas.medico = sesmt_table[0].medico +' + '+ (parseInt(sesmt_table[1].medico) * gruposAcima5000) +'*';
+                }else{
+                    respostaConsultaTabelas.medico = parseInt(sesmt_table[0].medico) + parseInt(sesmt_table[1].medico) * gruposAcima5000;
+                }
                 
+                respostaConsultaTabelas.obsSesmt2 = true;
             })
             .catch(()=>{
                 //se ocorreu algum erro, preenche informações para retornar ao front
