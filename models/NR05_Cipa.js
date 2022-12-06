@@ -31,9 +31,9 @@ const NR05_Cipa = db.define('nr05_dimensionamento_cipas', {
 });
 
 //Cria a tabela do DB se não existe
-//NR05_Cipa.sync();
+NR05_Cipa.sync();
 
 //Realiza alterações na tabela conforme implementado
-NR05_Cipa.sync({alter:true})
+//NR05_Cipa.sync({alter:true})
 
 module.exports = NR05_Cipa;

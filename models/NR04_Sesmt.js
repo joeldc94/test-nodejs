@@ -43,9 +43,9 @@ const NR04_Sesmt = db.define('nr04_dimensionamento_sesmts', {
 });
 
 //Cria a tabela do DB se não existe
-//NR04_Sesmt.sync();
+NR04_Sesmt.sync();
 
 //Realiza alterações na tabela conforme implementado
-NR04_Sesmt.sync({alter:true})
+//NR04_Sesmt.sync({alter:true})
 
 module.exports = NR04_Sesmt;

@@ -4,8 +4,8 @@ const app = express();
 const https = require('https');
 const got = require('got');
 
-const Home = require('./models/Home');
-const MsgContact = require('./models/MsgContact');
+//const Home = require('./models/Home');
+//const MsgContact = require('./models/MsgContact');
 const NR04_Sesmt = require('./models/NR04_Sesmt');
 const NR04_Cnae_Gr = require('./models/NR04_Cnae_Gr');
 const NR05_Cipa = require('./models/NR05_Cipa');
@@ -25,7 +25,7 @@ app.use((req, res, next) => {
     next();
 });
 
-
+/*
 //home page
 app.get('/', async (req,res) => {
     /*return res.json({
@@ -37,7 +37,7 @@ app.get('/', async (req,res) => {
             btn_title:"Entrar em Contato", 
             btn_link:"http://localhost:3000/contato"
         }
-    })*/
+    })
     await Home.findOne({
         //seleção das colunas que são necessárias
         attributes: ['text_one', 'text_two', 'text_three', 'btn_title', 'btn_link']
@@ -54,6 +54,7 @@ app.get('/', async (req,res) => {
         })
     })
 })
+*/
 
 //consulta DB NR04-SESMT
 app.post('/nr04-05-consulta', async (req,res) =>{
@@ -181,24 +182,12 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             //console.log("Erro: conexão com banco de dados não realizada com sucesso!");
         })
     }
-    /*
-    var grauRiscoConsultado;
-    var denominacaoCnaeConsultada;
-    var codigoCnaeConsultado;
-    */
-    
-    //console.log(codigoCnae1Inserido, numero_trabalhadores_inserido);
-    //console.log(respostaConsultaTabelas.codigosCnae[0], numero_trabalhadores_inserido);
+
 
 
     if(!respostaConsultaTabelas.erro)
     {
         
-        for (var i=0; i < codigosCnaesConsultar.length; i++) {
-            console.log('R-CNAE '+i+': '+codigosCnaesConsultar[i]);
-        }
-
-
         //consulta tabela CNAEs
         const cnae_table = await NR04_Cnae_Gr.findAll({
             //consulta linha para encontrar o CNAE inserido
@@ -230,36 +219,11 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //console.log('CNAE '+i+': '+cnae_table[i].codigo_cnae);
             }
             if(cnae_table.length > 1){
-                /*console.log("Com [1]<<<<<<<<<<");
-                console.log(cnae_table[0]);
-                console.log(cnae_table[1]);
-                */
                //verifica qual é o maior grau de risco
                respostaConsultaTabelas.maiorGrauRisco = Math.max(...respostaConsultaTabelas.graudeRisco);
-               /*
-                
-                if(cnae_table[0].grau_risco < cnae_table[1].grau_risco){
-                    respostaConsultaTabelas.cnae = cnae_table[1].codigo_cnae;
-                    respostaConsultaTabelas.denominacao = cnae_table[1].denominacao;
-                    respostaConsultaTabelas.grauDeRisco = cnae_table[1].grau_risco;
-                }
-                else{
-                    //se deu tudo certo, atribui os valores consultados a variável de resposta
-                    respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
-                    respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
-                    respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
-                }
-                */
             }
             else{
                 respostaConsultaTabelas.maiorGrauRisco = parseInt(cnae_table[0].grau_risco);
-                //console.log("Sem [1]<<<<<<<<<<");
-                //se deu tudo certo, atribui os valores consultados a variável de resposta
-                /*
-                respostaConsultaTabelas.cnae = cnae_table[0].codigo_cnae;
-                respostaConsultaTabelas.denominacao = cnae_table[0].denominacao;
-                respostaConsultaTabelas.grauDeRisco = cnae_table[0].grau_risco;
-                */
             }
         })
         .catch(()=>{
@@ -267,14 +231,6 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             respostaConsultaTabelas.status = 400;
             respostaConsultaTabelas.erro = true;
             respostaConsultaTabelas.mensagem = 'Erro: Nenhum valor encontrado com o CNAE informado.'
-
-            /*
-            respostaConsultaTabelas.mensagem = 'Não foi possível encontrar o CNAE fornecido na base de dados.';
-            return res.status(400).json({
-                erro: true,
-                mensagem: "Erro: Nenhum valor encontrado com o CNAE informado"
-            })
-            */
         })
     }
     //consultar somente se nro trabalhadores >= 50
@@ -299,10 +255,8 @@ app.post('/nr04-05-consulta', async (req,res) =>{
             })
             .then((sesmt_table) => {
 
-                //console.log(sesmt_table[0]);
-                //console.log(sesmt_table[1]);
-                
                 //se deu tudo certo, atribui os valores consultados a variável de resposta
+                //verifica se há valores com observações (*) e cria a string de forma adequada
                 
                 respostaConsultaTabelas.nroTrabalhadoresMinSesmt = 5001;
                 respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = '';
@@ -364,6 +318,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 attributes: ['id', 'grau_risco', 'nro_trabalhadores_min', 'nro_trabalhadores_max', 'tecnico_seg','engenheiro_seg','aux_tec_enfermagem','enfermeiro','medico']
             })
             .then((sesmt_table) => {
+                
                 //se deu tudo certo, atribui os valores consultados a variável de resposta
                 respostaConsultaTabelas.nroTrabalhadoresMinSesmt = sesmt_table[0].nro_trabalhadores_min;
                 respostaConsultaTabelas.nroTrabalhadoresMaxSesmt = sesmt_table[0].nro_trabalhadores_max;
@@ -372,6 +327,14 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 respostaConsultaTabelas.auxTecEnfermagem = sesmt_table[0].aux_tec_enfermagem;
                 respostaConsultaTabelas.enfermeiro = sesmt_table[0].enfermeiro;
                 respostaConsultaTabelas.medico = sesmt_table[0].medico;
+
+                const str = JSON.stringify(respostaConsultaTabelas);
+
+                //verifica se há algum valor com observação (*)
+                if(str.indexOf('"1***"')>=0)
+                    respostaConsultaTabelas.obsSesmt3 = true;
+                if(str.indexOf('"1*"')>=0)
+                    respostaConsultaTabelas.obsSesmt1 = true;
             })
             .catch(()=>{
                 //se ocorreu algum erro, preenche informações para retornar ao front
@@ -457,6 +420,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     return res.status(respostaConsultaTabelas.status).json({respostaConsultaTabelas});
 })
 
+/*
 //modificar textos home page
 app.post('/add-home',async (req, res) =>{
     
@@ -486,7 +450,7 @@ app.post('/add-home',async (req, res) =>{
         });
     })
 })
-
+*/
 
 /*
 //tela de contato, adiciona mensagem
