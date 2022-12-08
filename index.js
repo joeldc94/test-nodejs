@@ -64,12 +64,12 @@ app.post('/nr04-05-consulta', async (req,res) =>{
     const codigoCnae2Inserido = req.body.codigo_cnae2;
     const numero_trabalhadores_inserido = req.body.numero_trabalhadores;
 
-    var codigosCnaesConsultar = []; 
-    
+    var codigosCnaesConsultar = [];     
     
     var consultaCNPJ ={
         codigosCnae: [],
-        descricaoCnae: []
+        descricaoCnae: [],
+        dataUpdate: ''
     }
 
     //>>>verificar numero de trabalhadores
@@ -110,39 +110,60 @@ app.post('/nr04-05-consulta', async (req,res) =>{
        
         //try{
         //console.log('CNPJ INSERIDO! ==> ' + cnpjInserido);
-        
-        try {
-            //GET request na API
-            const response = await got(process.env.URL_API_MINHARECEITA + cnpjInserido, { json: true });
-            //console.log(response);
-            //console.log(response.body.cnae_fiscal);
-            const c = JSON.stringify(response.body.cnae_fiscal);
-            //formata o CNAE principal para o formato ab.cd-e, conforme inserido na tabela do grau de risco na NR04
-            consultaCNPJ.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
-            consultaCNPJ.descricaoCnae[0] = response.body.cnae_fiscal_descricao;
-            //console.log(response.body.cnaes_secundarios.length);
-
-
-
-            for (var i=0; i < response.body.cnaes_secundarios.length; i++) {
-                //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
-                //formata todos os cnaes secundários
-                var cAux = JSON.stringify(response.body.cnaes_secundarios[i].codigo);
-                consultaCNPJ.codigosCnae[i + 1] = cAux.charAt(0)+cAux.charAt(1)+'.'+cAux.charAt(2)+cAux.charAt(3)+'-'+cAux.charAt(4);
-                consultaCNPJ.descricaoCnae[i + 1] = response.body.cnaes_secundarios[i].descricao;
+        try{
+            const serviceOnline = await got(process.env.URL_API_MINHARECEITA + 'updated', { json: true });
+            if(serviceOnline.statusCode != 200)
+            {
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: não foi possível acessar a consulta do CNPJ. Considere realizar a consulta com o código CNAE, ou tente novamente mais tarde.';
             }
-
-            respostaConsultaTabelas.cnpj = response.body.cnpj;
-            respostaConsultaTabelas.razaoSocial = response.body.razao_social;
-            respostaConsultaTabelas.nomeFantasia = response.body.nome_fantasia;
-            
-            //console.log(respostaConsultaTabelas.codigosCnae[0]);
-            //respostaConsultaTabelas.codigosCnae[0] = response.body.cnae_fiscal;
-        } catch (error) {
-            console.log(error);
+            else{
+                consultaCNPJ.dataUpdate = serviceOnline.body.message;
+                //console.log(consultaCNPJ.dataUpdate);
+            }
+            //console.log(serviceOnline.statusCode);
+            //console.log(response.body.cnae_fiscal);
+        }catch(error){
+            //console.log(error);
             respostaConsultaTabelas.status = 400;
             respostaConsultaTabelas.erro = true;
-            respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
+            respostaConsultaTabelas.mensagem = 'Erro: não foi possível acessar a consulta do CNPJ. Considere realizar a consulta com o código CNAE ou tente novamente mais tarde.';
+        }
+
+        if(!respostaConsultaTabelas.erro){
+                try {
+                //GET request na API
+                const response = await got(process.env.URL_API_MINHARECEITA + cnpjInserido, { json: true });
+                //console.log(response);
+                //console.log(response.body.cnae_fiscal);
+                const c = JSON.stringify(response.body.cnae_fiscal);
+                //formata o CNAE principal para o formato ab.cd-e, conforme inserido na tabela do grau de risco na NR04
+                consultaCNPJ.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
+                consultaCNPJ.descricaoCnae[0] = response.body.cnae_fiscal_descricao;
+                //console.log(response.body.cnaes_secundarios.length);
+
+
+                for (var i=0; i < response.body.cnaes_secundarios.length; i++) {
+                    //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
+                    //formata todos os cnaes secundários
+                    var cAux = JSON.stringify(response.body.cnaes_secundarios[i].codigo);
+                    consultaCNPJ.codigosCnae[i + 1] = cAux.charAt(0)+cAux.charAt(1)+'.'+cAux.charAt(2)+cAux.charAt(3)+'-'+cAux.charAt(4);
+                    consultaCNPJ.descricaoCnae[i + 1] = response.body.cnaes_secundarios[i].descricao;
+                }
+
+                respostaConsultaTabelas.cnpj = response.body.cnpj;
+                respostaConsultaTabelas.razaoSocial = response.body.razao_social;
+                respostaConsultaTabelas.nomeFantasia = response.body.nome_fantasia;
+                
+                //console.log(respostaConsultaTabelas.codigosCnae[0]);
+                //respostaConsultaTabelas.codigosCnae[0] = response.body.cnae_fiscal;
+            } catch (error) {
+                //console.log(error);
+                respostaConsultaTabelas.status = 400;
+                respostaConsultaTabelas.erro = true;
+                respostaConsultaTabelas.mensagem = 'Erro: não foi possível consultar o CNPJ informado';
+            }
         }
     }
 
@@ -150,7 +171,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         if(consultaCNPJ.codigosCnae.length > 0){
             for (var i=0; i < consultaCNPJ.codigosCnae.length; i++) {
                 codigosCnaesConsultar[i] = consultaCNPJ.codigosCnae[i];
-                console.log(codigosCnaesConsultar[i]);
+                //console.log(codigosCnaesConsultar[i]);
             }
         }else if(codigoCnae1Inserido){
             codigosCnaesConsultar[0] = codigoCnae1Inserido;
