@@ -132,7 +132,7 @@ app.post('/nr04-05-consulta', async (req,res) =>{
         }
 
         if(!respostaConsultaTabelas.erro){
-                try {
+            try {
                 //GET request na API
                 const response = await got(process.env.URL_API_MINHARECEITA + cnpjInserido, { json: true });
                 //console.log(response);
@@ -141,15 +141,17 @@ app.post('/nr04-05-consulta', async (req,res) =>{
                 //formata o CNAE principal para o formato ab.cd-e, conforme inserido na tabela do grau de risco na NR04
                 consultaCNPJ.codigosCnae[0] = c.charAt(0)+c.charAt(1)+'.'+c.charAt(2)+c.charAt(3)+'-'+c.charAt(4);
                 consultaCNPJ.descricaoCnae[0] = response.body.cnae_fiscal_descricao;
-                //console.log(response.body.cnaes_secundarios.length);
+                console.log('[0] >> '+consultaCNPJ.codigosCnae[0]);
+                respostaConsultaTabelas.codigoCnaeFiscal = consultaCNPJ.codigosCnae[0];
+                respostaConsultaTabelas.descricaoCnaeFiscal = consultaCNPJ.descricaoCnae[0];
 
 
-                for (var i=0; i < response.body.cnaes_secundarios.length; i++) {
-                    //console.log('CNAES SECUNDARIOS:::::    ' + parsedData.cnaes_secundarios[i].codigo);
+                for (var i=0; i < response.body.cnaes_secundarios.length; i++) {                    
                     //formata todos os cnaes secundários
                     var cAux = JSON.stringify(response.body.cnaes_secundarios[i].codigo);
                     consultaCNPJ.codigosCnae[i + 1] = cAux.charAt(0)+cAux.charAt(1)+'.'+cAux.charAt(2)+cAux.charAt(3)+'-'+cAux.charAt(4);
                     consultaCNPJ.descricaoCnae[i + 1] = response.body.cnaes_secundarios[i].descricao;
+                    console.log('['+i+'] >> ' + consultaCNPJ.codigosCnae[i]);
                 }
 
                 respostaConsultaTabelas.cnpj = response.body.cnpj;
